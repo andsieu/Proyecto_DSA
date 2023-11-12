@@ -103,21 +103,21 @@ fig = go.Figure(data=go.Scattergeo(
     text = datos.texto,
     mode='markers',
     marker = dict(
-            size = 8,
-            opacity = 0.8,
-            reversescale = True,
-            autocolorscale = False,
-            symbol = 'circle',
-            line = dict(
-                width=1,
-                color='rgba(102, 102, 102)'
-            ),
-            colorscale = 'Blues',
-            cmin = 0,
-            color = datos.recaudo,
-            cmax = datos.recaudo.max(),
-            colorbar_title='Recaudo'
-        )))
+        size = 8,
+        opacity = 0.8,
+        reversescale = True,
+        autocolorscale = False,
+        symbol = 'circle',
+        line = dict(
+            width=1,
+            color='rgba(102, 102, 102)'
+        ),
+        colorscale = 'Blues',
+        cmin = 0,
+        color = datos.recaudo,
+        cmax = datos.recaudo.max(),
+        colorbar_title='Recaudo'
+    )))
 
 # Diseño del punto medio de Colombia
 fig.update_geos(
@@ -130,16 +130,18 @@ fig.update_geos(
 fig.update_layout(
     title='Recaudo por Peaje',
     geo=dict(
-        showland = True,
-            landcolor = 'rgb(250, 250, 250)',
-            subunitcolor = 'rgb(217, 217, 217)',
-            countrycolor = 'rgb(217, 217, 217)',
-            countrywidth = 0.5,
-            subunitwidth = 0.5
-    )
+        showland=True,
+        landcolor='rgb(250, 250, 250)',
+        subunitcolor='rgb(217, 217, 217)',
+        countrycolor='rgb(217, 217, 217)',
+        countrywidth=0.5,
+        subunitwidth=0.5
+    ),
+    height=900,
+    margin=dict(l=20, r=20, t=60, b=20)
 )
 
-# Obtener la lista de peajes, meses y categorías de tarifas
+# Obtener la lista de peajes, meses, y años categorías de tarifas
 peajes = df['peaje'].unique()
 meses = df['mes'].unique()
 categorias_tarifa = df['categoriatarifa'].unique()
@@ -152,95 +154,103 @@ mes_inverse_dict = dict(zip(label_encoder_mes.transform(label_encoder_mes.classe
 categoria_inverse_dict = dict(zip(label_encoder_categoria.transform(label_encoder_categoria.classes_),
                                   label_encoder_categoria.classes_))
 
-
-
-
 # Iniciar la aplicación Dash
 app = dash.Dash(__name__)
 
+# Establecer el título general de la aplicación
+app.title = "SITUACIÓN ACTUAL PEAJES DE LA AGENCIA NACIONAL DE INFRAESTRUCTURA"
+
 # Diseño del dashboard
 app.layout = html.Div([
+    
+    html.H1("SITUACIÓN ACTUAL PEAJES DE LA AGENCIA NACIONAL DE INFRAESTRUCTURA"),
+
     # Fila superior
     html.Div([
-        # Mapa en la parte derecha
+        # Gráfico de líneas y Gráfico de barras con el mismo ancho (50% cada uno)
         html.Div([
-            dcc.Graph(id='map', figure=fig)
-        ], style={'width': '50%', 'float': 'right'}),
-        
-        # Gráfico de líneas en la parte izquierda
-        html.Div([
-            html.H3("Recaudo Total por Mes"),
-            # Filtros
+            # Gráfico de líneas
             html.Div([
-                dcc.Dropdown(
-                    id='peaje-dropdown',
-                    options=[{'label': peaje, 'value': peaje} for peaje in data.peaje.unique()],
-                    multi=True,
-                    value=[np.sort(data.peaje)[0]]
-                )
-            ], style={'width': '32%', 'display': 'inline-block'}),
-            # Gráfico
-            dcc.Graph(id='recaudo-line-chart')
+                html.H3("RECAUDO TOTAL POR MES"),
+                # Filtros
+                html.Div([
+                    dcc.Dropdown(
+                        id='peaje-dropdown',
+                        options=[{'label': peaje, 'value': peaje} for peaje in data.peaje.unique()],
+                        multi=True,
+                        value=[np.sort(data.peaje)[0]]
+                    )
+                ], style={'width': '100%', 'display': 'inline-block'}),
+                # Gráfico
+                dcc.Graph(id='recaudo-line-chart')
+            ], style={'width': '100%', 'display': 'inline-block', 'height': '50%'}),
+            
+            # Gráfico de barras
+            html.Div([
+                html.H3("RECAUDO TOTAL POR CATEGORÍA DE TARIFA"),
+                # Filtros
+                html.Div([
+                    dcc.Dropdown(
+                        id='mes-dropdown',
+                        options=[{'label': mes, 'value': mes} for mes in data.mes.unique()],
+                        multi=True,
+                        value=[data.mes.min()]
+                    )
+                ], style={'width': '100%', 'display': 'inline-block'}),
+                # Gráfico
+                dcc.Graph(id='recaudo-bar-chart')
+            ], style={'width': '100%', 'display': 'inline-block', 'height': '50%'}),
         ], style={'width': '50%', 'display': 'inline-block'}),
+
+        # Mapa a la derecha con altura ajustada
+        html.Div([
+            html.H3("RECAUDO POR PEAJE"),
+            dcc.Graph(id='map', figure=fig),
+            dcc.Slider(
+                id='year-slider',
+                min=data['año'].min(),
+                max=data['año'].max(),
+                marks={str(year): str(year) for year in range(data['año'].min(), data['año'].max() + 1)},
+                step=None,
+                value=data['año'].max()
+    )
+        ], style={'width': '50%', 'float': 'right', 'height': '100%'}),
     ], style={'margin-bottom': '20px'}),
     
-    # Fila inferior
+    # Sección de predicciones en la parte inferior (ajustado al 100% del ancho)
     html.Div([
-        # Gráfico de barras en la parte izquierda
+        html.H3("REALIZAR PREDICCIONES"),
+        # Filtros
         html.Div([
-            html.H3("Recaudo Total por Categoría de Tarifa"),
-            # Filtros
-            html.Div([
-                dcc.Dropdown(
-                    id='mes-dropdown',
-                    options=[{'label': mes, 'value': mes} for mes in data.mes.unique()],
-                    multi=True,
-                    value=[data.mes.min()]
-                )
-            ], style={'width': '70%', 'display': 'inline-block'}),
-            # Gráfico
-            dcc.Graph(id='recaudo-bar-chart')
-        ], style={'width': '50%', 'display': 'inline-block'}),
-        
-        # Sección de predicciones en la parte inferior
+            dcc.Dropdown(
+                id='prediccion-peaje-dropdown',
+                options=[{'label': peaje_inverse_dict[peaje], 'value': peaje} for peaje in peajes],
+                multi=True,
+                value=[np.sort(df.peaje)[0]]
+            )
+        ], style={'width': '32%', 'display': 'inline-block'}),
         html.Div([
-            html.H3("Realizar Predicciones"),
-            # Filtros
-            html.Div([
-                dcc.Dropdown(
-                    id='prediccion-peaje-dropdown',
-                    options=[{'label': peaje_inverse_dict[peaje], 'value': peaje} for peaje in peajes],
-                    multi=True,
-                    value=[np.sort(df.peaje)[0]]
-                )
-            ], style={'width': '32%', 'display': 'inline-block'}),
-            html.Div([
-                dcc.Dropdown(
-                    id='prediccion-mes-dropdown',
-                    options=[{'label': mes_inverse_dict[mes], 'value': mes} for mes in df['mes'].unique()],
-                    multi=True,
-                    value=[df.mes.max()]
-                )
-            ], style={'width': '32%', 'display': 'inline-block'}),
-            html.Div([
-                dcc.Dropdown(
-                    id='prediccion-categoria-dropdown',
-                    options=[{'label': categoria_inverse_dict[categoria], 'value': categoria} for categoria in categorias_tarifa],
-                    multi=True,
-                    value=[np.sort(df.categoriatarifa)[0]]
-                )
-            ], style={'width': '32%', 'display': 'inline-block'}),
-            # Botón de predicción
-            html.Button('Realizar Predicción', id='button-predict'),
-            # Resultado de predicción
-            html.Div(id='prediction-output')
-        ], style={'margin-top': '20px'}),
-    ]),
+            dcc.Dropdown(
+                id='prediccion-mes-dropdown',
+                options=[{'label': mes_inverse_dict[mes], 'value': mes} for mes in df['mes'].unique()],
+                multi=True,
+                value=[df.mes.max()]
+            )
+        ], style={'width': '32%', 'display': 'inline-block'}),
+        html.Div([
+            dcc.Dropdown(
+                id='prediccion-categoria-dropdown',
+                options=[{'label': categoria_inverse_dict[categoria], 'value': categoria} for categoria in categorias_tarifa],
+                multi=True,
+                value=[np.sort(df.categoriatarifa)[0]]
+            )
+        ], style={'width': '32%', 'display': 'inline-block'}),
+        # Botón de predicción
+        html.Button('Realizar Predicción', id='button-predict'),
+        # Resultado de predicción
+        html.Div(id='prediction-output')
+    ], style={'margin-top': '20px', 'width': '100%'}),
 ])
-
-
-
-
 
 # Callback para actualizar el gráfico de línea en función del filtro de peaje
 @app.callback(
@@ -276,6 +286,60 @@ def update_bar_chart(selected_meses):
     
     return fig
 
+# Callback para actualizar el mapa en función del año seleccionado en el slider
+@app.callback(
+    Output('map', 'figure'),
+    [Input('year-slider', 'value')]
+)
+def update_map(selected_year):
+    filtered_data = datos[datos['año'] == selected_year]
+    fig = go.Figure(data=go.Scattergeo(
+        lat=filtered_data.latitud,
+        lon=filtered_data.longitud,
+        text=filtered_data.texto,
+        mode='markers',
+        marker=dict(
+            size=8,
+            opacity=0.8,
+            reversescale=True,
+            autocolorscale=False,
+            symbol='circle',
+            line=dict(
+                width=1,
+                color='rgba(102, 102, 102)'
+            ),
+            colorscale='Blues',
+            cmin=0,
+            color=filtered_data.recaudo,
+            cmax=filtered_data.recaudo.max(),
+            colorbar_title='Recaudo'
+        )
+    ))
+
+    # Diseño del punto medio de Colombia
+    fig.update_geos(
+        center=dict(lon=-74, lat=6),
+        lataxis_range=[1, 15],
+        lonaxis_range=[-85, -65]
+    )
+
+    # Ajustes de diseño
+    fig.update_layout(
+        title='Recaudo por Peaje',
+        geo=dict(
+            showland=True,
+            landcolor='rgb(250, 250, 250)',
+            subunitcolor='rgb(217, 217, 217)',
+            countrycolor='rgb(217, 217, 217)',
+            countrywidth=0.5,
+            subunitwidth=0.5
+        ),
+        height=900,
+        margin=dict(l=20, r=20, t=60, b=20)
+    )
+
+    return fig
+
 # Callback para realizar predicciones
 @app.callback(
     Output('prediction-output', 'children'),
@@ -309,4 +373,4 @@ def make_prediction(n_clicks, selected_peajes, selected_meses, selected_categori
 
 # Ejecutar la aplicación
 if __name__ == '__main__':
-    app.run_server(port=8002)
+    app.run_server(debug=True)
